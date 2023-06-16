@@ -1,42 +1,97 @@
-#include <ESPAsyncWebServer.h>
+#include <ESPAsyncWebSrv.h>
 #include <WiFi.h>
 
 
-// LED digital pin number
-#define LED 2
+const char* ssid = "iPhone (3)"; // Nome da rede
+const char* password = "Caralho123"; // Password da rede
 
-// Setup the server on port 80
-AsyncWebServer server(80);
+#define buzzer 13 // Pino em que o buzzer está ligado
+#define button 12 // Pino em que o butão está ligado
+
+AsyncWebServer server(80); // Abre um servidor na porta 80
+// Notas da melodia animada
+
+// Melody notes
+int melody[] = {
+  659, 659, 659, 523, 659, 784, 523, 392,
+  523, 659, 784, 523, 659, 880, 698, 659, 523, 587,
+  494, 523, 392, 330, 440, 494, 392, 659, 784,
+  880, 698, 659, 523, 587, 494, 523, 392, 330, 440, 494,
+  392, 659, 784, 880, 698, 659, 523, 587, 494, 523, 392, 330, 440, 494, 392,
+  392, 784, 880, 932, 880, 784, 659, 587, 523, 494, 523, 392, 659, 784, 880,
+  698, 659, 523, 587, 494, 523, 392, 330, 440, 494, 392
+};
+
+// Note durations
+int noteDurations[] = {
+  8, 8, 8, 4, 8, 8, 4, 4,
+  8, 8, 8, 4, 8, 8, 8, 8, 8, 8,
+   4, 8, 8, 4, 4, 4, 4, 4, 4,
+  4, 4, 4, 4, 4, 8, 8, 4, 4, 4, 4, 4,
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8,
+  8, 8, 8, 4, 8, 8, 4, 4, 4, 4, 4, 4, 4, 8, 8,
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
+};
+
+
+volatile bool playMelody = false;
+
+void playHappyBirthday() {
+  while (true) {
+    for (int thisNote = 0; thisNote < sizeof(melody) / sizeof(melody[0]); thisNote++) {
+      int noteDuration = 500 / noteDurations[thisNote];
+      tone(buzzer, melody[thisNote], noteDuration);
+      int pauseBetweenNotes = noteDuration * 1.30;
+
+      // Verifica se o botão foi pressionado antes de tocar a próxima nota
+      while (digitalRead(button) == HIGH && noteDuration > 0) {
+        delay(10);
+        noteDuration -= 10;
+      }
+
+      // Se o botão foi pressionado, para a melodia e sai do loop
+      if (digitalRead(button) == LOW) {
+        noTone(buzzer);
+        return;
+      }
+
+      delay(pauseBetweenNotes);
+      noTone(buzzer);
+    }
+  }
+}
 
 void setup() {
   Serial.begin(115200);
 
-  // Set the pinmode in the LED pin
-  pinMode(LED, OUTPUT);
+  // Define o que cada Pino será responsável por fazer
+  pinMode(buzzer, OUTPUT);
+  pinMode(button, INPUT_PULLUP); // INPUT_PULLUP é para usar a resisência do próprio arduino em vez de uma resistência externa
 
-  // Start connecting to Wifi
-  WiFi.begin("iPhone (3)", "Caralho123");
+  // Conectar à rede WIFI
+  WiFi.begin(ssid, password);
 
-  // Connect to Wifi
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Connecting to Wifi...");
+    Serial.println(WiFi.localIP());
   }
-  Serial.print("Connected to Wifi with IP: ");
-  Serial.println(WiFi.localIP());
 
-  // Listen for requests in HTTP
-  server.on("/blink", HTTP_GET, [](AsyncWebServerRequest *request){
-    digitalWrite(LED, HIGH);
+  // Recebe o request do website para o IP/start e ativa o buzzer
+  server.on("/start", HTTP_GET, [](AsyncWebServerRequest *request) {
+    Serial.println("Endpoint /start accessed");
+    playMelody = true;
+    request->send(200, "text/plain", "Melody started");
   });
 
-  server.on("/noblink", HTTP_GET, [](AsyncWebServerRequest *request){
-    digitalWrite(LED, LOW);
-  });
-
-  // Start the server
   server.begin();
 }
 
 void loop() {
+  // Se playMelody for verdadeiro, toca a melodia "Happy Birthday"
+  if (playMelody) {
+    playHappyBirthday();
+    playMelody = false;
+  }
+  delay(100);
 }
