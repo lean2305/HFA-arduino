@@ -1,12 +1,17 @@
 #include <ESPAsyncWebSrv.h>
 #include <WiFi.h>
+#include <WiFiClient.h>
+#include <IPAddress.h>
 
+IPAddress ip(10, 0, 5, 124); // Endereço IP fixo
+IPAddress subnet(255, 255, 0, 0); // Máscara de sub-rede
+IPAddress gateway(10, 0, 0, 1); // Gateway padrão
 
-const char* ssid = "iPhone (3)"; // Nome da rede
-const char* password = "Caralho123"; // Password da rede
+const char* ssid = "Hfa"; // Nome da rede
+const char* password = "ascoteloffice20"; // Senha da rede
 
 #define buzzer 13 // Pino em que o buzzer está ligado
-#define button 12 // Pino em que o butão está ligado
+#define button 12 // Pino em que o botão está ligado
 
 AsyncWebServer server(80); // Abre um servidor na porta 80
 // Notas da melodia animada
@@ -71,7 +76,7 @@ void setup() {
 
   // Conectar à rede WIFI
   WiFi.begin(ssid, password);
-
+  WiFi.config(ip, gateway, subnet);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println(WiFi.localIP());
